@@ -11,8 +11,7 @@ import Data.Foldable (sum)
 
 import Partial.Unsafe (unsafePartial)
 
-import Test.QuickCheck.Arbitrary (arbitrary)
-import Test.QuickCheck.Gen (Gen, vectorOf, randomSample')
+import Test.QuickCheck.Gen (vectorOf, chooseInt, randomSample')
 
 main :: Eff (console :: CONSOLE, random :: RANDOM) Unit
 main = do
@@ -27,7 +26,7 @@ main = do
   logShow =<< go 100000
 
   where
-  go n = map (sum <<< unsafeHead) $ randomSample' 1 (vectorOf n (arbitrary :: Gen Int))
+  go n = map (sum <<< unsafeHead) $ randomSample' 1 (vectorOf n (chooseInt bottom top))
 
   unsafeHead :: forall x. Array x -> x
   unsafeHead xs = unsafePartial (head xs)
