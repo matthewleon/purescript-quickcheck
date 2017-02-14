@@ -20,6 +20,7 @@ module Test.QuickCheck.Gen
   , listOf
   , vectorOf
   , elements
+  , shuffle
   , runGen
   , evalGen
   , perturbGen
@@ -39,7 +40,7 @@ import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
 import Control.Monad.State (State, runState, evalState)
 import Control.Monad.State.Class (state, modify)
 
-import Data.Array ((!!), length)
+import Data.Array ((!!), length, sortBy, zip)
 import Data.Foldable (fold)
 import Data.Int (toNumber)
 import Data.List (List(..), toUnfoldable)
@@ -179,6 +180,12 @@ elements :: forall a. a -> Array a -> Gen a
 elements x xs = do
   n <- chooseInt zero (length xs)
   pure if n == zero then x else fromMaybe x (xs !! (n - one))
+
+-- | Generate a random permutation of the given array
+shuffle :: forall a. Array a -> Gen (Array a)
+shuffle xs = do
+  ns <- vectorOf (length xs) (chooseInt bottom top)
+  pure (map snd (sortBy (comparing fst) (zip ns xs)))
 
 -- | Run a random generator
 runGen :: forall a. Gen a -> GenState -> Tuple a GenState
