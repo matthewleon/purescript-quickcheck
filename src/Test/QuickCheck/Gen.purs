@@ -21,6 +21,7 @@ module Test.QuickCheck.Gen
   , vectorOf
   , elements
   , shuffle
+  , alphaNumString
   , runGen
   , evalGen
   , perturbGen
@@ -28,7 +29,6 @@ module Test.QuickCheck.Gen
   , sample
   , randomSample
   , randomSample'
-  , alphaNumString
   ) where
 
 import Prelude
@@ -187,6 +187,16 @@ shuffle xs = do
   ns <- vectorOf (length xs) (chooseInt bottom top)
   pure (map snd (sortBy (comparing fst) (zip ns xs)))
 
+alphaNumString :: Gen String
+alphaNumString = fromCharArray <$> arrayOf anyChar
+  where
+  rest :: Array Char
+  rest = toCharArray "bcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+  anyChar :: Gen Char
+  anyChar = oneOf (pure 'a') (map pure rest)
+
+
 -- | Run a random generator
 runGen :: forall a. Gen a -> GenState -> Tuple a GenState
 runGen = runState <<< unGen
@@ -226,11 +236,3 @@ perturbGen n gen = Gen do
   modify \s -> s { newSeed = lcgPerturb (toNumber (float32ToInt32 n)) s.newSeed }
   unGen gen
 
-alphaNumString :: Gen String
-alphaNumString = fromCharArray <$> arrayOf anyChar
-  where
-  rest :: Array Char
-  rest = toCharArray "bcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-  anyChar :: Gen Char
-  anyChar = oneOf (pure 'a') (map pure rest)
