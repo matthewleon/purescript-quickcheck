@@ -41,6 +41,7 @@ import Control.Monad.State (State, runState, evalState)
 import Control.Monad.State.Class (state, modify)
 
 import Data.Array ((!!), length, sortBy, zip)
+import Data.Enum (class Enum, upFrom)
 import Data.Foldable (fold)
 import Data.Int (toNumber)
 import Data.List (List(..), toUnfoldable)
@@ -196,6 +197,8 @@ alphaNumString = fromCharArray <$> arrayOf anyChar
   anyChar :: Gen Char
   anyChar = oneOf (pure 'a') (map pure rest)
 
+bounded :: forall a. (Bounded a, Enum a) => Gen a
+bounded = elements bottom (upFrom bottom)
 
 -- | Run a random generator
 runGen :: forall a. Gen a -> GenState -> Tuple a GenState
