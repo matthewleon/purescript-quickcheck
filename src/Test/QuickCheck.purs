@@ -21,8 +21,7 @@ module Test.QuickCheck
   , quickCheck'
   , quickCheckWithSeed
   , quickCheckPure
-  , class Testable
-  , test
+  , Prop(..)
   , Result(..)
   , withHelp
   , (<?>)
@@ -31,7 +30,6 @@ module Test.QuickCheck
   , assertNotEquals
   , (/==)
   , module Test.QuickCheck.LCG
-  , module Test.QuickCheck.Arbitrary
   ) where
 
 import Prelude
@@ -50,7 +48,6 @@ import Data.Monoid (mempty)
 import Data.Tuple (Tuple(..))
 import Data.Unfoldable (replicateA)
 
-import Test.QuickCheck.Arbitrary (class Arbitrary, arbitrary, class Coarbitrary, coarbitrary)
 import Test.QuickCheck.Gen (Gen, evalGen, runGen)
 import Test.QuickCheck.LCG (Seed, runSeed, randomSeed)
 
@@ -61,20 +58,19 @@ type QC eff a = Eff (console :: CONSOLE, random :: RANDOM, err :: EXCEPTION | ef
 -- |
 -- | This function generates a new random seed, runs 100 tests and
 -- | prints the test results to the console.
-quickCheck :: forall eff prop. Testable prop => prop -> QC eff Unit
+quickCheck :: forall eff. Prop -> QC eff Unit
 quickCheck prop = quickCheck' 100 prop
 
 -- | A variant of the `quickCheck` function which accepts an extra parameter
 -- | representing the number of tests which should be run.
-quickCheck' :: forall eff prop. Testable prop => Int -> prop -> QC eff Unit
+quickCheck' :: forall eff. Int -> Prop -> QC eff Unit
 quickCheck' n prop = do
   seed <- randomSeed
   quickCheckWithSeed seed n prop
 
 -- | A variant of the `quickCheck'` function that accepts a specific seed as
 -- | well as the number tests that should be run.
-quickCheckWithSeed
-  :: forall eff prop. Testable prop => Seed -> Int -> prop -> QC eff Unit
+quickCheckWithSeed :: forall eff. Seed -> Int -> Prop -> QC eff Unit
 quickCheckWithSeed initialSeed n prop = do
   let result = tailRec loop { seed: initialSeed, index: 0, successes: 0, firstFailure: mempty }
   log $ show result.successes <> "/" <> show n <> " test(s) passed."
@@ -116,45 +112,24 @@ type LoopState =
 -- |
 -- | The first argument is the _random seed_ to be passed to the random generator.
 -- | The second argument is the number of tests to run.
-quickCheckPure :: forall prop. Testable prop => Seed -> Int -> prop -> List Result
+quickCheckPure :: Seed -> Int -> Prop -> List Result
 quickCheckPure s n prop = evalGen (replicateA n (test prop)) { newSeed: s, size: 10 }
-
--- | The `Testable` class represents _testable properties_.
--- |
--- | A testable property is a function of zero or more `Arbitrary` arguments,
--- | returning a `Boolean` or `Result`.
--- |
--- | Testable properties can be passed to the `quickCheck` function.
-class Testable prop where
-  test :: prop -> Gen Result
-
-instance testableResult :: Testable Result where
-  test = pure
-
-instance testableBoolean :: Testable Boolean where
-  test true = pure Success
-  test false = pure $ Failed "Test returned false"
-
-instance testableFunction :: (Arbitrary t, Testable prop) => Testable (t -> prop) where
-  test f = arbitrary >>= test <<< f
-
-instance testableGen :: Testable prop => Testable (Gen prop) where
-  test = flip bind test
 
 -- | The result of a test: success or failure (with an error message).
 data Result = Success | Failed String
-
 instance showResult :: Show Result where
   show Success = "Success"
-  show (Failed msg) = "Failed: " <> msg
+  show (Failed msg) = "Failed " <> msg
 
--- | This operator attaches an error message to a failed test.
--- |
--- | For example:
--- |
--- | ```purescript
--- | test x = myProperty x <?> ("myProperty did not hold for " <> show x)
--- | ```
+data Prop = PropBoolean Boolean
+          | PropResult Result
+          | PropGen (Gen Prop)
+
+test :: Prop -> Gen Result
+test (PropBoolean b) = pure (if b then Success else Failed "Test returned false")
+test (PropResult r) = pure r
+test (PropGen g) = g >>= test
+
 withHelp :: Boolean -> String -> Result
 withHelp true _ = Success
 withHelp false msg = Failed msg

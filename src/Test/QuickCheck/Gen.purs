@@ -27,6 +27,7 @@ module Test.QuickCheck.Gen
   , sample
   , randomSample
   , randomSample'
+  , alphaNumString
   ) where
 
 import Prelude
@@ -45,6 +46,7 @@ import Data.List (List(..), toUnfoldable)
 import Data.Maybe (fromMaybe)
 import Data.Monoid.Additive (Additive(..))
 import Data.Newtype (unwrap)
+import Data.String (fromCharArray, toCharArray)
 import Data.Tuple (Tuple(..), fst, snd)
 
 import Math as M
@@ -216,3 +218,12 @@ perturbGen :: forall a. Number -> Gen a -> Gen a
 perturbGen n gen = Gen do
   modify \s -> s { newSeed = lcgPerturb (toNumber (float32ToInt32 n)) s.newSeed }
   unGen gen
+
+alphaNumString :: Gen String
+alphaNumString = fromCharArray <$> arrayOf anyChar
+  where
+  rest :: Array Char
+  rest = toCharArray "bcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+  anyChar :: Gen Char
+  anyChar = oneOf (pure 'a') (map pure rest)
