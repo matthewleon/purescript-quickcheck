@@ -12,7 +12,10 @@ import Data.Foldable (sum)
 import Partial.Unsafe (unsafePartial)
 
 import Test.QuickCheck.Arbitrary (arbitrary)
-import Test.QuickCheck.Gen (Gen, vectorOf, randomSample')
+import Test.QuickCheck.Gen (
+  Gen, evalGen, vectorOf, arrayOf, randomSample', chooseInt
+)
+import Test.QuickCheck.LCG (randomSeed)
 
 main :: Eff (console :: CONSOLE, random :: RANDOM) Unit
 main = do
@@ -25,6 +28,11 @@ main = do
   log "Testing stack safety of Gen"
   logShow =<< go 20000
   logShow =<< go 100000
+
+  log "Array of random ints"
+  logShow <<<
+    (\seed -> evalGen (arrayOf (chooseInt bottom top)) {newSeed: seed, size: 10})
+      =<< randomSeed
 
   where
   go n = map (sum <<< unsafeHead) $ randomSample' 1 (vectorOf n (arbitrary :: Gen Int))
