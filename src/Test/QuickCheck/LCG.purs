@@ -2,6 +2,7 @@ module Test.QuickCheck.LCG
   ( Seed
   , mkSeed
   , runSeed
+  , runSeed'
   , lcgM
   , lcgC
   , lcgN
@@ -13,71 +14,51 @@ module Test.QuickCheck.LCG
 import Prelude
 
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Random (RANDOM, randomInt)
+import Control.Monad.Eff.Random (RANDOM, randomRange)
 
-import Data.Int (fromNumber, toNumber)
-import Data.Maybe (fromJust)
+import Data.Int (toNumber, floor)
 
-import Math ((%))
+import Math ((%), abs)
 
-import Partial.Unsafe (unsafePartial)
+-- | The *multiplier*: a magic constant for the linear congruential generator.
+lcgM :: Number
+lcgM = 25214903917.0
 
--- | The *multiplier*: a magic constant for the linear congruential generator
-lcgM :: Int
-lcgM = 48271
-
--- | The *increment*: a magic constant for the linear congruential generator
-lcgC :: Int
-lcgC = 0
+-- | The *increment*: a magic constant for the linear congruential generator.
+lcgC :: Number
+lcgC = 11.0
 
 -- | The *modulus*: a magic constant for the linear congruential generator.
--- | It is equal to 2^31 - 1, a Mersenne prime. It is useful for this value to
--- | be prime, because then the requirement of the initial seed being coprime
--- | to the modulus is satisfied when the seed is between 1 and lcgN - 1.
-lcgN :: Int
-lcgN = 2147483647
+-- | 2 ** 48, as used in Java and POSIX random number generators.
+lcgN :: Number
+lcgN = 281474976710656.0
 
 -- | Perturb a seed value
 lcgPerturb :: Number -> Seed -> Seed
-lcgPerturb d = Seed <<< go <<< runSeed
+lcgPerturb d = Seed <<< go <<< runSeed'
   where
-  go n = unsafePartial $ fromJust $
-    fromNumber $ (toNumber lcgM * toNumber n + d) % toNumber lcgN
+  go n = (lcgM * n + d) % lcgN
 
 -- | Step the linear congruential generator
 lcgNext :: Seed -> Seed
-lcgNext = lcgPerturb (toNumber lcgC)
+lcgNext = lcgPerturb lcgC
 
 -- | Create a random seed
 randomSeed :: forall e. Eff (random :: RANDOM | e) Seed
-randomSeed = mkSeed <$> randomInt seedMin seedMax
+randomSeed = mkSeed <<< floor <$> randomRange 0.0 (toNumber top)
 
--- | The minimum permissible Seed value.
-seedMin :: Int
-seedMin = 1
-
--- | The maximum permissible Seed value.
-seedMax :: Int
-seedMax = lcgN - 1
-
--- | A seed for the linear congruential generator. We omit a `Semiring`
--- | instance because there is no `zero` value, as 0 is not an acceptable
--- | seed for the generator.
-newtype Seed = Seed Int
+-- | A seed for the linear congruential generator.
+newtype Seed = Seed Number
 
 mkSeed :: Int -> Seed
-mkSeed x = Seed (ensureBetween seedMin seedMax x)
+mkSeed x = Seed $ abs $ toNumber x
 
 runSeed :: Seed -> Int
-runSeed (Seed x) = x
+--- because our seed is modulo 48, dividing by 2^16 gives us bits 17..48.
+runSeed (Seed x) = floor (x / 65536.0 + toNumber bottom)
 
-ensureBetween :: Int -> Int -> Int -> Int
-ensureBetween min max n =
-  let
-    rangeSize = max - min
-    n' = n `mod` rangeSize
-  in
-    if n' < min then n' + max else n'
+runSeed' :: Seed -> Number
+runSeed' (Seed x) = x
 
 instance showSeed :: Show Seed where
   show (Seed x) = "Seed " <> show x

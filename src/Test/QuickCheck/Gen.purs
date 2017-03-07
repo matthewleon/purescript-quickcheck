@@ -207,7 +207,7 @@ lcgStep = Gen $ state f where
 
 -- | A random generator which approximates a uniform random variable on `[0, 1]`
 uniform :: Gen Number
-uniform = (\n -> toNumber n / toNumber lcgN) <$> lcgStep
+uniform = (\n -> toNumber n / lcgN) <$> lcgStep
 
 foreign import float32ToInt32 :: Number -> Int
 
