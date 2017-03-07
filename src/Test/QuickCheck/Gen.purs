@@ -40,7 +40,7 @@ import Control.Monad.State.Class (state, modify)
 
 import Data.Array ((!!), length)
 import Data.Foldable (fold)
-import Data.Int (toNumber)
+import Data.Int (toNumber, floor)
 import Data.List (List(..), toUnfoldable)
 import Data.Maybe (fromMaybe)
 import Data.Monoid.Additive (Additive(..))
@@ -115,12 +115,7 @@ choose a b = (*) (max - min) >>> (+) min <$> uniform where
 -- | Create a random generator which chooses uniformly distributed
 -- | integers from the closed interval `[a, b]`.
 chooseInt :: Int -> Int -> Gen Int
-chooseInt a b = clamp <$> lcgStep
-  where
-  clamp :: Int -> Int
-  clamp x = case x `mod` (b - a + one) of
-              r | r >= 0 -> a + r
-                | otherwise -> b + r + one
+chooseInt a b = floor <$> choose (toNumber a) (toNumber b + 1.0)
 
 -- | Create a random generator which selects and executes a random generator from
 -- | a non-empty collection of random generators with uniform probability.
