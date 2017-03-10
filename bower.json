@@ -28,5 +28,8 @@
     "purescript-random": "^2.0.0",
     "purescript-strings": "^2.0.0",
     "purescript-transformers": "^2.0.0"
+  },
+  "devDependencies": {
+    "purescript-chisquared": "matthewleon/purescript-chisquared#a43bb1da17984fe87a7be6c034c892420d1c5c38"
   }
 }
