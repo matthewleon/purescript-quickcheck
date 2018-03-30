@@ -10,5 +10,8 @@
     "pulp": "^11.0.0",
     "purescript-psa": "^0.5.1",
     "rimraf": "^2.6.1"
+  },
+  "dependencies": {
+    "npm": "^5.8.0"
   }
 }
